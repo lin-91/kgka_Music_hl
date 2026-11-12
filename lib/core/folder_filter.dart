@@ -78,3 +78,66 @@ class FolderFilter {
     return result;
   }
 }
+
+/// 文件夹分组的展示模型。
+///
+/// [folder] 为规范化后的父目录绝对路径，`''` 表示无法解析父目录的
+/// 「其他」分组；[displayName] 为界面展示名；[songs] 为该目录下的歌曲，
+/// 顺序与输入列表保持一致。
+class FolderGroup {
+  const FolderGroup({
+    required this.folder,
+    required this.displayName,
+    required this.songs,
+  });
+
+  final String folder;
+  final String displayName;
+  final List<Song> songs;
+
+  /// 该分组的播放队列哈希列表（用于调试与去重判断）。
+  List<String> get songHashes => [for (final s in songs) s.hash];
+
+  /// 分组内是否包含 [hash] 对应的歌曲。
+  bool containsHash(String hash) => songs.any((s) => s.hash == hash);
+}
+
+/// 取文件夹显示名：优先末级目录名，顶层存储目录（末级为 `0`）显示完整路径。
+///
+/// [folder] 为规范化路径；无法解析时原样返回。
+String folderDisplayName(String folder) {
+  final segments = folder.split('/').where((s) => s.isNotEmpty).toList();
+  if (segments.isEmpty) return folder;
+  final last = segments.last;
+  if (last == '0' || last == 'storage') return folder;
+  return last;
+}
+
+/// 按父文件夹对 [songs] 分组。
+///
+/// 排序规则：先按展示名不区分大小写升序；「其他」分组（无法解析父目录）
+/// 固定排在最后。分组内部的歌曲顺序保持输入顺序。
+List<FolderGroup> groupSongsByFolder(List<Song> songs) {
+  final buckets = <String, List<Song>>{};
+  for (final song in songs) {
+    final parent = parentFolderOf(song.hash) ?? '';
+    buckets.putIfAbsent(parent, () => <Song>[]).add(song);
+  }
+  final groups = <FolderGroup>[
+    for (final entry in buckets.entries)
+      FolderGroup(
+        folder: entry.key,
+        displayName:
+            entry.key.isEmpty ? '其他' : folderDisplayName(entry.key),
+        songs: entry.value,
+      ),
+  ];
+  groups.sort((a, b) {
+    if (a.folder.isEmpty) return 1;
+    if (b.folder.isEmpty) return -1;
+    return a.displayName
+        .toLowerCase()
+        .compareTo(b.displayName.toLowerCase());
+  });
+  return groups;
+}
