@@ -120,7 +120,7 @@ String folderDisplayName(String folder) {
 List<FolderGroup> groupSongsByFolder(List<Song> songs) {
   final buckets = <String, List<Song>>{};
   for (final song in songs) {
-    final parent = parentFolderOf(song.hash) ?? '';
+    final parent = FolderFilter.parentFolderOf(song.hash) ?? '';
     buckets.putIfAbsent(parent, () => <Song>[]).add(song);
   }
   final groups = <FolderGroup>[
