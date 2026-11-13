@@ -11,6 +11,7 @@ Song _localSong(String path) => Song(
     );
 
 void main() {
+  _folderGroupTests();
   group('normalizeFolderPath', () {
     test('统一分隔符并转小写、去尾部斜杠', () {
       expect(
@@ -129,6 +130,78 @@ void main() {
       expect(counts.first.count, 2);
       expect(counts.last.folder, '/storage/emulated/0/recordings');
       expect(counts.last.count, 1);
+    });
+  });
+}
+
+// ==== 文件夹分组与播放队列语义 ====
+
+Song _songWithPath(String path) => Song(
+      id: path,
+      title: path.split('/').last,
+      artist: '艺人',
+      hash: path,
+      source: SongSource.local,
+    );
+
+void _folderGroupTests() {
+  group('groupSongsByFolder', () {
+    test('按父目录分组，组内保持输入顺序', () {
+      final songs = [
+        _songWithPath('/storage/emulated/0/Music/周杰伦/晴天.mp3'),
+        _songWithPath('/storage/emulated/0/Download/新歌A.mp3'),
+        _songWithPath('/storage/emulated/0/Music/周杰伦/七里香.mp3'),
+      ];
+      final groups = groupSongsByFolder(songs);
+      expect(groups, hasLength(2));
+      final music = groups.firstWhere(
+        (g) => g.folder == '/storage/emulated/0/music/周杰伦',
+      );
+      expect(music.displayName, '周杰伦');
+      expect(music.songs.map((s) => s.hash), [
+        '/storage/emulated/0/Music/周杰伦/晴天.mp3',
+        '/storage/emulated/0/Music/周杰伦/七里香.mp3',
+      ]);
+    });
+
+    test('无法解析父目录的歌曲归入「其他」并排在最后', () {
+      final songs = [
+        _songWithPath('no-parent.mp3'),
+        _songWithPath('/storage/emulated/0/Download/新歌B.mp3'),
+      ];
+      final groups = groupSongsByFolder(songs);
+      expect(groups, hasLength(2));
+      expect(groups.last.folder, '');
+      expect(groups.last.displayName, '其他');
+      expect(groups.last.songs.single.hash, 'no-parent.mp3');
+    });
+
+    test('分组播放队列仅包含该文件夹下的歌曲', () {
+      final songs = [
+        _songWithPath('/storage/emulated/0/Music/陈奕迅/浮夸.flac'),
+        _songWithPath('/storage/emulated/0/Download/新歌A.mp3'),
+        _songWithPath('/storage/emulated/0/Music/陈奕迅/十年.flac'),
+      ];
+      final groups = groupSongsByFolder(songs);
+      final eason = groups.firstWhere((g) => g.displayName == '陈奕迅');
+      expect(eason.songHashes, [
+        '/storage/emulated/0/Music/陈奕迅/浮夸.flac',
+        '/storage/emulated/0/Music/陈奕迅/十年.flac',
+      ]);
+      expect(eason.containsHash('/storage/emulated/0/Download/新歌A.mp3'),
+          isFalse);
+    });
+
+    test('展示名排序不区分大小写，顶层存储目录回退完整路径', () {
+      final songs = [
+        _songWithPath('/storage/emulated/0/Music/b/a.mp3'),
+        _songWithPath('/storage/emulated/0/Music/A/c.mp3'),
+        _songWithPath('/storage/emulated/0/x.mp3'),
+      ];
+      final groups = groupSongsByFolder(songs);
+      final names = groups.map((g) => g.displayName).toList();
+      expect(names.first.toLowerCase(), 'a');
+      expect(names.last, '/storage/emulated/0');
     });
   });
 }
