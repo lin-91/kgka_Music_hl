@@ -113,10 +113,19 @@ String folderDisplayName(String folder) {
   return last;
 }
 
+bool _isStorageRootFolder(String folder) {
+  final segments = folder.split('/').where((s) => s.isNotEmpty).toList();
+  return segments.length >= 3 &&
+      segments[0] == 'storage' &&
+      segments[1] == 'emulated' &&
+      segments[2] == '0';
+}
+
 /// 按父文件夹对 [songs] 分组。
 ///
 /// 排序规则：先按展示名不区分大小写升序；「其他」分组（无法解析父目录）
-/// 固定排在最后。分组内部的歌曲顺序保持输入顺序。
+/// 固定排在最后。顶层存储目录也固定排在最后，避免 `/storage/emulated/0`
+/// 因 ASCII 排序而被误排到首位。分组内部的歌曲顺序保持输入顺序。
 List<FolderGroup> groupSongsByFolder(List<Song> songs) {
   final buckets = <String, List<Song>>{};
   for (final song in songs) {
@@ -135,6 +144,10 @@ List<FolderGroup> groupSongsByFolder(List<Song> songs) {
   groups.sort((a, b) {
     if (a.folder.isEmpty) return 1;
     if (b.folder.isEmpty) return -1;
+    final aRoot = _isStorageRootFolder(a.folder);
+    final bRoot = _isStorageRootFolder(b.folder);
+    if (aRoot && !bRoot) return 1;
+    if (!aRoot && bRoot) return -1;
     return a.displayName
         .toLowerCase()
         .compareTo(b.displayName.toLowerCase());
