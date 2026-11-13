@@ -21,7 +21,7 @@ class FolderFilter {
     return normalized.toLowerCase();
   }
 
-  /// 取文件所在父文件夹（已规范化）。无法解析时返回 `null`。
+  /// 取文件所在父文件夹（已规范化）。无���解析时返回 `null`。
   static String? parentFolderOf(String? filePath) {
     if (filePath == null) return null;
     final normalized = filePath.trim().replaceAll('\\', '/');
@@ -115,7 +115,7 @@ String folderDisplayName(String folder) {
 
 bool _isStorageRootFolder(String folder) {
   final segments = folder.split('/').where((s) => s.isNotEmpty).toList();
-  return segments.length >= 3 &&
+  return segments.length == 3 &&
       segments[0] == 'storage' &&
       segments[1] == 'emulated' &&
       segments[2] == '0';
