@@ -108,6 +108,12 @@ class FolderGroup {
 String folderDisplayName(String folder) {
   final segments = folder.split('/').where((s) => s.isNotEmpty).toList();
   if (segments.isEmpty) return folder;
+  if (segments.length == 3 &&
+      segments[0] == 'storage' &&
+      segments[1] == 'emulated' &&
+      segments[2] == '0') {
+    return folder;
+  }
   final last = segments.last;
   if (last == '0' || last == 'storage') return folder;
   return last;
@@ -115,7 +121,7 @@ String folderDisplayName(String folder) {
 
 bool _isStorageRootFolder(String folder) {
   final segments = folder.split('/').where((s) => s.isNotEmpty).toList();
-  return segments.length >= 3 &&
+  return segments.length == 3 &&
       segments[0] == 'storage' &&
       segments[1] == 'emulated' &&
       segments[2] == '0';
